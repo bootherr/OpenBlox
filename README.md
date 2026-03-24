@@ -1,6 +1,6 @@
 # [OpenBlox](https://www.openblox.site/)
 
-**Current release:** v1.0 Beta (`1.0.0-beta` in `package.json`).
+**Current release:** v1.0 Beta
 
 Open source Discord bot for managing Roblox groups. Rank members, verify accounts, view group info, and keep audit logs, all from Discord.
 
