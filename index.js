@@ -42,7 +42,7 @@ async function boot() {
   } catch (err) {
     if (err.code === 'TokenInvalid') {
       log.fatal('bot', 'Your bot token is invalid.');
-      log.error('bot', 'Double check the BOT_TOKEN in your .env file.');
+      log.error('bot', 'Double check BOT_TOKEN in your environment (.env or host secrets such as Replit Secrets).');
       log.info('bot', 'Go to https://discord.com/developers/applications > your bot > Bot tab > Reset Token');
     } else if (err.code === 'DisallowedIntents') {
       log.fatal('bot', 'Missing required gateway intents.');

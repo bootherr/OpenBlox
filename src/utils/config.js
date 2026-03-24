@@ -50,16 +50,16 @@ function loadConfig() {
   }
 
   if (!process.env.BOT_TOKEN) {
-    log.fatal('config', 'BOT_TOKEN is missing from your .env file.');
-    log.error('config', 'Create a .env file in the project root with your bot token.');
+    log.fatal('config', 'BOT_TOKEN is not set in the environment.');
+    log.error('config', 'Add it to a .env file in the project root, or use your host\'s secret store (e.g. Replit Secrets) with the key BOT_TOKEN.');
     log.info('config', 'Get your token at https://discord.com/developers/applications');
-    log.info('config', 'Select your bot > Bot tab > Reset Token > Copy it into .env');
+    log.info('config', 'Select your bot > Bot tab > Reset Token > copy the value into .env or Secrets.');
     process.exit(1);
   }
 
   if (!process.env.ROBLOX_API_KEY) {
-    log.fatal('config', 'ROBLOX_API_KEY is missing from your .env file.');
-    log.error('config', 'Create a .env file in the project root with your API key.');
+    log.fatal('config', 'ROBLOX_API_KEY is not set in the environment.');
+    log.error('config', 'Add it to a .env file in the project root, or use your host\'s secret store (e.g. Replit Secrets) with the key ROBLOX_API_KEY.');
     log.info('config', 'Get your key at https://create.roblox.com/dashboard/credentials');
     log.info('config', 'Make sure it has group:read and group:write scopes for your group.');
     process.exit(1);

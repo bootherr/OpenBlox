@@ -52,6 +52,8 @@ npm install
 
 ### 3. Set up your environment
 
+The bot reads `BOT_TOKEN`, `ROBLOX_API_KEY`, and optional `BLOXLINK_API_KEY` from the process environment. A `.env` file is the usual approach on your own machine; on **Replit**, add those exact names under **Secrets** instead (no `.env` required).
+
 Copy the example env file and fill in your secrets:
 
 ```bash
