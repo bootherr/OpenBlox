@@ -30,9 +30,8 @@ Built on the Roblox Open Cloud API. No cookies, no fragile workarounds.
 
 The OpenBlox **documentation site** (the `openblox` front-end in the same workspace as this bot, not this repo alone) includes **Setup Onboarding**: a full-screen walkthrough—Windows, macOS, Linux, or Replit, then Discord (token, intents, **Public Bot** off), Roblox API key, `.env` / `openblox.conf`, invite URL, and starting the bot—with a progress bar, step list, and saved progress in the browser until you end the session.
 
-**[Click here to start Setup Onboarding](http://localhost:8080/docs?wizard=start)** if you are running the docs site locally (`cd` into the `openblox` folder, `npm install`, `npm run dev`; Vite uses port **8080** by default). That URL drops you straight into the onboarding flow—no extra confirm dialog.
+**[Click here to start Setup Onboarding](http://www.openblox.site/docs?wizard=start)**
 
-If the site is hosted somewhere public, use the same query on your own origin, for example `https://your-domain.com/docs?wizard=start`.
 
 You can also open **Documentation** (`/docs`) in the site, expand **Getting Started**, and click the **Setup Onboarding** card; that path asks for confirmation before the full-screen flow starts.
 
@@ -89,8 +88,8 @@ allowed_roles = ROLE_ID_1, ROLE_ID_2
 [abuse_detection]
 enabled = false
 threshold = low
-exempt_user_ids =
-exempt_role_ids =
+exempt_user_ids = USER_UD, USER_ID2
+exempt_role_ids = ROLE_ID_1, ROLE_ID_2
 
 [logging]
 ranking_channel_id = YOUR_CHANNEL_ID
