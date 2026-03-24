@@ -1,7 +1,7 @@
 {
   "name": "openblox-bot",
   "version": "1.0.0-beta",
-  "description": "OpenBloxBot Beta — open source Discord bot for Roblox group management",
+  "description": "Self-hosted Discord bot for Roblox group management (Roblox Open Cloud API).",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

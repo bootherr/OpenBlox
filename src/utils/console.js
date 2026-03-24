@@ -5,7 +5,7 @@ const fs = require('fs');
 const log = require('./logger');
 
 const ROOT = path.join(__dirname, '../..');
-const REPO = 'bootherr/OpenBloxBot';
+const REPO = 'bootherr/OpenBlox';
 const PROTECTED_FILES = ['data', 'node_modules'];
 
 let currentClient = null;

@@ -1,6 +1,6 @@
-# OpenBloxBot Beta
+# OpenBlox
 
-**Version:** Beta (`1.0.0-beta` in `package.json`)
+**Current release:** v1.0 Beta (`1.0.0-beta` in `package.json`).
 
 Open source Discord bot for managing Roblox groups. Rank members, verify accounts, view group info, and keep audit logs, all from Discord.
 
@@ -40,8 +40,8 @@ You can also open **Documentation** (`/docs`) in the site, expand **Getting Star
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/bootherr/OpenBloxBot.git
-cd OpenBloxBot
+git clone https://github.com/bootherr/OpenBlox.git
+cd OpenBlox
 ```
 
 ### 2. Install dependencies
@@ -157,7 +157,7 @@ The bot also checks for updates automatically on startup and will let you know i
 ## Project Structure
 
 ```
-OpenBloxBot/
+OpenBlox/
 ├── index.js                    Entry point
 ├── openblox.conf               Bot configuration
 ├── .env.example                Environment variable template

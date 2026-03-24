@@ -33,7 +33,7 @@ function timestamp() {
 
 function printBanner() {
   console.log(BANNER);
-  console.log(`${CYAN}${BOLD}  OpenBloxBot Beta${RESET} ${DIM}v${pkg.version}${RESET}\n`);
+  console.log(`${CYAN}${BOLD}  OpenBlox${RESET} ${DIM}v${pkg.version}${RESET}\n`);
 }
 
 function online(botTag) {
