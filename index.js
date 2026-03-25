@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const log = require('./src/utils/logger');
 const { startConsole, setClient, onRestart, checkForUpdates } = require('./src/utils/console');

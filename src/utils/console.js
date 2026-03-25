@@ -176,49 +176,74 @@ function mergeConf(existingPath, newPath) {
   fs.writeFileSync(existingPath, merged.join('\n'), 'utf-8');
 }
 
-function parseEnvValues(content) {
-  const values = {};
-  for (const line of content.split('\n')) {
+function parseEnvMap(content) {
+  const map = new Map();
+  for (const raw of content.split('\n')) {
+    const line = raw.replace(/\r$/, '');
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-    const eqIdx = trimmed.indexOf('=');
-    if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    const val = trimmed.slice(eqIdx + 1).trim();
-    if (val) values[key] = val;
+    const eq = line.indexOf('=');
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    const value = line.slice(eq + 1);
+    map.set(key, value);
   }
-  return values;
+  return map;
 }
 
-function mergeEnv(existingPath, newExamplePath) {
-  if (!fs.existsSync(existingPath)) return;
-  if (!fs.existsSync(newExamplePath)) return;
+function writeMergedEnv(envPath, examplePath) {
+  const exampleContent = fs.readFileSync(examplePath, 'utf-8');
+  const userMap = fs.existsSync(envPath)
+    ? parseEnvMap(fs.readFileSync(envPath, 'utf-8'))
+    : new Map();
 
-  const existingContent = fs.readFileSync(existingPath, 'utf-8');
-  const existingValues = parseEnvValues(existingContent);
-  const exampleContent = fs.readFileSync(newExamplePath, 'utf-8');
-  const exampleValues = parseEnvValues(exampleContent);
+  const exampleKeys = new Set();
+  const out = [];
 
-  const newKeys = Object.keys(exampleValues).filter(k => !(k in existingValues));
-  if (newKeys.length === 0) return;
-
-  let additions = '\n';
-  const exampleLines = exampleContent.split('\n');
-  for (const key of newKeys) {
-    for (let i = 0; i < exampleLines.length; i++) {
-      const line = exampleLines[i].trim();
-      if (line.startsWith(`${key}=`) || line.startsWith(`${key} =`)) {
-        let j = i - 1;
-        while (j >= 0 && exampleLines[j].trim().startsWith('#')) j--;
-        for (let c = j + 1; c <= i; c++) {
-          additions += exampleLines[c] + '\n';
-        }
-        break;
-      }
+  for (const raw of exampleContent.split('\n')) {
+    const line = raw.replace(/\r$/, '');
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      out.push(line);
+      continue;
+    }
+    const eq = line.indexOf('=');
+    if (eq === -1) {
+      out.push(line);
+      continue;
+    }
+    const key = line.slice(0, eq).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+      out.push(line);
+      continue;
+    }
+    exampleKeys.add(key);
+    if (userMap.has(key)) {
+      out.push(`${key}=${userMap.get(key)}`);
+    } else {
+      out.push(line);
     }
   }
 
-  fs.writeFileSync(existingPath, existingContent.trimEnd() + '\n' + additions, 'utf-8');
+  const orphanKeys = [...userMap.keys()].filter((k) => !exampleKeys.has(k));
+  if (orphanKeys.length > 0) {
+    out.push('');
+    out.push('# From your previous .env (not listed in .env.example)');
+    for (const k of orphanKeys.sort()) {
+      out.push(`${k}=${userMap.get(k)}`);
+    }
+  }
+
+  const body = `${out.join('\n').replace(/\n+$/, '')}\n`;
+  const tmp = `${envPath}.openblox.tmp`;
+  fs.writeFileSync(tmp, body, 'utf-8');
+  try {
+    fs.renameSync(tmp, envPath);
+  } catch {
+    fs.copyFileSync(tmp, envPath);
+    fs.unlinkSync(tmp);
+  }
 }
 
 async function handleUpdate() {
@@ -301,9 +326,16 @@ async function handleUpdate() {
 
     const newEnvExample = path.join(srcDir, '.env.example');
     if (fs.existsSync(newEnvExample)) {
+      const envPath = path.join(ROOT, '.env');
+      const hadEnvBefore = fs.existsSync(envPath);
       fs.cpSync(newEnvExample, path.join(ROOT, '.env.example'));
-      mergeEnv(path.join(ROOT, '.env'), newEnvExample);
-      log.info('update', 'Merged .env (your keys preserved, new keys added)');
+      writeMergedEnv(envPath, newEnvExample);
+      log.info(
+        'update',
+        hadEnvBefore
+          ? 'Updated .env in one file (your values kept, structure from .env.example).'
+          : 'Created .env from .env.example — add your secrets.'
+      );
     }
 
     saveLocalCommit(remoteSha);

@@ -1,6 +1,6 @@
 # [OpenBlox](https://www.openblox.site/)
 
-**Current release:** v1.0 Beta
+**Current release:** v1.1 Beta
 
 Open source Discord bot for managing Roblox groups. Rank members, verify accounts, view group info, and keep audit logs, all from Discord.
 
@@ -153,7 +153,7 @@ Once the bot is running, you can type these commands in the terminal:
 
 - `stop` - Shut down the bot
 - `restart` - Reload config and reconnect (same process, no new terminal)
-- `update` - Check for updates and install the latest changes from GitHub
+- `update` - Check for updates and install the latest changes from GitHub (merges into **one** `.env` next to `index.js`, preserving your values)
 - `help` - Show the list of commands
 
 The bot also checks for updates automatically on startup and will let you know if one is available.

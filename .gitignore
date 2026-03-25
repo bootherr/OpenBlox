@@ -1,6 +1,9 @@
 node_modules/
+bloxlink-tgz/
+codiium-bloxlink-api*.tgz
 data/
 .env
+.env.openblox.tmp
 *.log
 .DS_Store
 .update_tmp/
