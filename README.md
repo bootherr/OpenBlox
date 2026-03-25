@@ -10,7 +10,7 @@ Built on the Roblox Open Cloud API. No cookies, no fragile workarounds.
 
 - **Ranking** - Promote, demote, or set any member's rank with `/rank`
 - **Verification** - Link Discord accounts to Roblox via About Me bio check
-- **Bloxlink Support** - Optional auto-verification for users already verified through Bloxlink
+- **Bloxlink Support** - Optional guild Bloxlink lookup on Verify with a confirmation step before linking
 - **Group Info** - View linked Roblox group details with `/groupinfo`
 - **Audit Logs** - Track every action with `/auditlogs`, with pagination and filters
 - **User Info** - View Discord and linked Roblox info with `/userinfo`
@@ -130,20 +130,22 @@ npm start
 
 ## Bloxlink Integration (Optional)
 
-If you have a Bloxlink API key, users who are already verified through Bloxlink can skip the manual bio check.
+If you have a Bloxlink API key, the bot can look up each member’s linked Roblox account **for that Discord server** (guild-scoped API) and offer one-tap verification after they confirm it is their account.
 
 1. Go to [Bloxlink Developer Dashboard](https://blox.link/dashboard/developer)
 2. Create a guild-scoped API key for the server your bot is in
 3. Add it to your `.env` file as `BLOXLINK_API_KEY`
+4. Keep the **Bloxlink bot** in the same server so links exist for that guild
 
 ## How Verification Works
 
 1. User clicks the **Verify** button in the verification channel
-2. User enters their Roblox username in the modal
-3. If Bloxlink is configured and the user is already verified there, they are auto-verified
-4. Otherwise, the bot generates a unique phrase and tells the user to set it as their Roblox bio (About Me)
-5. User clicks **Check Bio** and the bot verifies the phrase matches
-6. User gets the verified role and can remove the phrase from their bio
+2. If **Bloxlink** is configured, the bot checks Bloxlink for a Roblox account linked to that Discord user **in this server**. If one is found, the user sees the linked username and must press **Yes, verify me** (or **No, different account** to use another method)
+3. If there is no Bloxlink link (or Bloxlink is not configured), the user clicks **Enter Roblox username** and fills in the modal
+4. If they use the username path and Bloxlink already links them to a **different** Roblox user than the one they typed, the bot explains that and still offers the bio phrase flow for the username they entered
+5. Otherwise, the bot generates a unique phrase and tells the user to set it as their Roblox bio (About Me)
+6. User clicks **Check Bio** and the bot verifies the phrase matches
+7. User gets the verified role and can remove the phrase from their bio
 
 ## Terminal Commands
 

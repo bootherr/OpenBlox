@@ -9,6 +9,9 @@ const {
   handleCheckDescription,
   handleCancel,
   handleUnlink,
+  handleBloxlinkConfirm,
+  handleBloxlinkDifferent,
+  handleOpenUsernameModal,
 } = require('../commands/verify');
 const { checkAbuse, recordAction } = require('../../services/abuse');
 const { CV2 } = require('../../utils/messages');
@@ -127,6 +130,24 @@ module.exports = async (interaction) => {
 
     if (interaction.customId === 'verify_start') {
       try { await handleVerifyButton(interaction); }
+      catch (err) { await safeReply(interaction, err); }
+      return;
+    }
+
+    if (interaction.customId.startsWith('verify_bloxlink_confirm:')) {
+      try { await handleBloxlinkConfirm(interaction); }
+      catch (err) { await safeReply(interaction, err); }
+      return;
+    }
+
+    if (interaction.customId === 'verify_bloxlink_different') {
+      try { await handleBloxlinkDifferent(interaction); }
+      catch (err) { await safeReply(interaction, err); }
+      return;
+    }
+
+    if (interaction.customId === 'verify_open_username_modal') {
+      try { await handleOpenUsernameModal(interaction); }
       catch (err) { await safeReply(interaction, err); }
       return;
     }

@@ -184,7 +184,10 @@ async function lookupBloxlink(apiKey, guildId, discordId) {
     });
 
     if (!res.ok) {
-      if (res.status === 404) return null;
+      if (res.status === 404) {
+        log.info('bloxlink', `discord-to-roblox 404 | guild=${guildId} discord=${discordId}`);
+        return null;
+      }
       if (res.status === 401) {
         log.error('bloxlink', 'Bloxlink API key is invalid or unauthorized (401)');
         log.info('bloxlink', 'Check your key at https://blox.link/dashboard/developer');
@@ -201,8 +204,9 @@ async function lookupBloxlink(apiKey, guildId, discordId) {
     }
 
     const data = await res.json();
-    if (!data.robloxID) return null;
-    return String(data.robloxID);
+    const raw = data.robloxID ?? data.roblox?.id;
+    if (raw === undefined || raw === null) return null;
+    return String(raw);
   } catch (err) {
     log.error('bloxlink', 'Bloxlink lookup failed', err);
     return null;

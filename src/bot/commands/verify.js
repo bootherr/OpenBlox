@@ -19,6 +19,24 @@ function setState(key, value) {
   db.prepare('INSERT OR REPLACE INTO bot_state (key, value) VALUES (?, ?)').run(key, value);
 }
 
+function buildUsernameModal() {
+  return new ModalBuilder()
+    .setCustomId('verify_username_modal')
+    .setTitle('Verify your Roblox account')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('roblox_username')
+          .setLabel('Roblox Username')
+          .setPlaceholder('Enter your exact Roblox username')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMinLength(3)
+          .setMaxLength(20)
+      )
+    );
+}
+
 function buildPanelPayload() {
   return {
     flags: CV2,
@@ -95,6 +113,38 @@ function setupPanelWatcher(client) {
   });
 }
 
+async function completeBloxlinkVerification(interaction, robloxUserId, robloxUsername) {
+  verify.confirmVerification(interaction.user.id, robloxUserId, robloxUsername);
+
+  if (config.verification.verifiedRoleId) {
+    await interaction.member.roles.add(config.verification.verifiedRoleId).catch(err => {
+      log.error('verify', 'Failed to add verified role', err);
+    });
+  }
+
+  const avatarUrl = await roblox.fetchAvatar(robloxUserId);
+
+  logAudit('Verification', interaction.user.id, null, {
+    robloxUsername,
+    robloxUserId,
+    method: 'Bloxlink',
+    avatarUrl
+  });
+
+  const components = [text('### Verified via Bloxlink')];
+  const infoText = `**Username:** ${robloxUsername}\n**User ID:** ${robloxUserId}`;
+  if (avatarUrl) {
+    components.push(section(infoText, avatarUrl));
+  } else {
+    components.push(text(infoText));
+  }
+
+  await interaction.editReply({
+    flags: CV2 | MessageFlags.Ephemeral,
+    components: [{ type: 17, components }]
+  });
+}
+
 async function handleVerifyButton(interaction) {
   if (!config.verification.enabled) {
     return interaction.reply(errorReply('Verification is not enabled on this server.'));
@@ -114,23 +164,124 @@ async function handleVerifyButton(interaction) {
     });
   }
 
-  const modal = new ModalBuilder()
-    .setCustomId('verify_username_modal')
-    .setTitle('Verify your Roblox account')
-    .addComponents(
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId('roblox_username')
-          .setLabel('Roblox Username')
-          .setPlaceholder('Enter your exact Roblox username')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMinLength(3)
-          .setMaxLength(20)
-      )
-    );
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  await interaction.showModal(modal);
+  let bloxlinkId = null;
+  if (config.bloxlink.apiKey && interaction.guildId) {
+    bloxlinkId = await roblox.lookupBloxlink(config.bloxlink.apiKey, interaction.guildId, interaction.user.id);
+  }
+
+  if (bloxlinkId) {
+    const robloxUser = await roblox.fetchUser(bloxlinkId);
+    const usernameLine = robloxUser
+      ? `**${robloxUser.username}** (ID: ${bloxlinkId})`
+      : `**ID:** ${bloxlinkId}`;
+
+    return interaction.editReply({
+      flags: CV2 | MessageFlags.Ephemeral,
+      components: [{ type: 17, components: [
+        text('### Bloxlink account found'),
+        text(`Bloxlink has this Discord account linked to Roblox ${usernameLine} in this server. Is this you?`),
+        separator(),
+        { type: 1, components: [
+          { type: 2, style: 3, label: 'Yes, verify me', custom_id: `verify_bloxlink_confirm:${bloxlinkId}` },
+          { type: 2, style: 2, label: 'No, different account', custom_id: 'verify_bloxlink_different' }
+        ]}
+      ]}]
+    });
+  }
+
+  if (config.bloxlink.apiKey && interaction.guildId) {
+    log.info('bloxlink', `No Bloxlink roblox id for discord=${interaction.user.id} guild=${interaction.guildId} (404, error, or unlinked)`);
+  }
+
+  const noLinkBody = config.bloxlink.apiKey
+    ? 'No Bloxlink link was found for you in **this server**. Use the button below to verify with your Roblox username and profile bio, or link your account with Bloxlink in this server first.'
+    : 'Click the button below and enter your Roblox username.';
+
+  return interaction.editReply({
+    flags: CV2 | MessageFlags.Ephemeral,
+    components: [{ type: 17, components: [
+      text('### Verify your Roblox account'),
+      text(noLinkBody),
+      separator(),
+      { type: 1, components: [
+        { type: 2, style: 1, label: 'Enter Roblox username', custom_id: 'verify_open_username_modal' }
+      ]}
+    ]}]
+  });
+}
+
+async function handleBloxlinkConfirm(interaction) {
+  const match = interaction.customId.match(/^verify_bloxlink_confirm:(\d+)$/);
+  if (!match) {
+    return interaction.reply(errorReply('Invalid confirmation.'));
+  }
+  const claimedId = match[1];
+
+  if (!config.verification.enabled) {
+    return interaction.reply(errorReply('Verification is not enabled on this server.'));
+  }
+
+  await interaction.deferUpdate();
+
+  if (!config.bloxlink.apiKey || !interaction.guildId) {
+    return interaction.editReply(errorReply('Bloxlink is not configured.'));
+  }
+
+  const bloxlinkId = await roblox.lookupBloxlink(config.bloxlink.apiKey, interaction.guildId, interaction.user.id);
+  if (!bloxlinkId || String(bloxlinkId) !== String(claimedId)) {
+    return interaction.editReply(errorReply('That link is no longer valid. Press **Verify** on the panel to try again.'));
+  }
+
+  const alreadyLinked = verify.getVerifiedByRobloxId(claimedId);
+  if (alreadyLinked && alreadyLinked.discord_id !== interaction.user.id) {
+    return interaction.editReply(errorReply('That Roblox account is already linked to another Discord user.'));
+  }
+
+  const robloxUser = await roblox.fetchUser(claimedId);
+  if (!robloxUser) {
+    return interaction.editReply(errorReply('Could not load that Roblox account. Try again.'));
+  }
+
+  await completeBloxlinkVerification(interaction, String(claimedId), robloxUser.username);
+}
+
+async function handleBloxlinkDifferent(interaction) {
+  await interaction.deferUpdate();
+  await interaction.editReply({
+    flags: CV2 | MessageFlags.Ephemeral,
+    components: [{ type: 17, components: [
+      text('### Verify with username'),
+      text('Enter your Roblox username. You will set a short phrase in your Roblox bio to complete verification.'),
+      separator(),
+      { type: 1, components: [
+        { type: 2, style: 1, label: 'Enter Roblox username', custom_id: 'verify_open_username_modal' }
+      ]}
+    ]}]
+  });
+}
+
+async function handleOpenUsernameModal(interaction) {
+  if (!config.verification.enabled) {
+    return interaction.reply(errorReply('Verification is not enabled on this server.'));
+  }
+
+  const existing = verify.getVerifiedUser(interaction.user.id);
+  if (existing) {
+    return interaction.reply({
+      flags: CV2 | MessageFlags.Ephemeral,
+      components: [{ type: 17, components: [
+        text(`### Already Verified\nYou are linked to **${existing.roblox_username}**.`),
+        separator(),
+        { type: 1, components: [
+          { type: 2, style: 4, label: 'Unlink Account', custom_id: 'verify_unlink' }
+        ]}
+      ]}]
+    });
+  }
+
+  await interaction.showModal(buildUsernameModal());
 }
 
 async function handleUsernameModal(interaction) {
@@ -145,49 +296,35 @@ async function handleUsernameModal(interaction) {
 
   const alreadyLinked = verify.getVerifiedByRobloxId(resolved.id);
   if (alreadyLinked && alreadyLinked.discord_id !== interaction.user.id) {
-    return interaction.editReply(errorReply(`That Roblox account is already linked to another Discord user.`));
+    return interaction.editReply(errorReply('That Roblox account is already linked to another Discord user.'));
   }
 
-  if (config.bloxlink.apiKey) {
-    const bloxlinkId = await roblox.lookupBloxlink(config.bloxlink.apiKey, interaction.guildId, interaction.user.id);
-
-    if (bloxlinkId && bloxlinkId === resolved.id) {
-      verify.confirmVerification(interaction.user.id, resolved.id, resolved.username);
-
-      if (config.verification.verifiedRoleId) {
-        await interaction.member.roles.add(config.verification.verifiedRoleId).catch(err => {
-          log.error('verify', 'Failed to add verified role', err);
-        });
-      }
-
-      const avatarUrl = await roblox.fetchAvatar(resolved.id);
-
-      logAudit('Verification', interaction.user.id, null, {
-        robloxUsername: resolved.username,
-        robloxUserId: resolved.id,
-        method: 'Bloxlink',
-        avatarUrl
-      });
-
-      const components = [text('### Verified via Bloxlink')];
-      const infoText = `**Username:** ${resolved.username}\n**User ID:** ${resolved.id}`;
-      if (avatarUrl) {
-        components.push(section(infoText, avatarUrl));
-      } else {
-        components.push(text(infoText));
-      }
-
-      return interaction.editReply({
-        flags: CV2 | MessageFlags.Ephemeral,
-        components: [{ type: 17, components }]
-      });
+  let bloxlinkId = null;
+  if (config.bloxlink.apiKey && interaction.guildId) {
+    bloxlinkId = await roblox.lookupBloxlink(config.bloxlink.apiKey, interaction.guildId, interaction.user.id);
+    if (bloxlinkId && String(bloxlinkId) === String(resolved.id)) {
+      await completeBloxlinkVerification(interaction, resolved.id, resolved.username);
+      return;
     }
+  }
+
+  let mismatchHint = null;
+  if (bloxlinkId && String(bloxlinkId) !== String(resolved.id)) {
+    const other = await roblox.fetchUser(bloxlinkId);
+    mismatchHint = other
+      ? `Bloxlink links your Discord to **${other.username}** in this server, not **${resolved.username}**. You can verify as **${other.username}** from the verification panel, or continue below with your bio.`
+      : `Bloxlink links your Discord to a different Roblox account (ID ${bloxlinkId}) than **${resolved.username}**. Continue below to verify with your bio, or use the account Bloxlink has on file.`;
   }
 
   const phrase = verify.createSession(interaction.user.id, resolved.id, resolved.username, interaction.guildId);
   const avatarUrl = await roblox.fetchAvatar(resolved.id);
 
   const components = [];
+
+  if (mismatchHint) {
+    components.push(text(mismatchHint));
+    components.push(separator());
+  }
 
   const headerText = `### Verify as ${resolved.username}\nSet your **Roblox bio** to the phrase below, then press **Check Bio**.`;
 
@@ -329,4 +466,7 @@ module.exports = {
   handleCheckDescription,
   handleCancel,
   handleUnlink,
+  handleBloxlinkConfirm,
+  handleBloxlinkDifferent,
+  handleOpenUsernameModal,
 };

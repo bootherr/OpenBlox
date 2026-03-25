@@ -1,0 +1,1 @@
+{"version":3,"sources":["../src/apiInformation.ts"],"sourcesContent":["export const apiBaseUrl = \"https://api.blox.link\";\r\nexport const apiVersion = \"v4\";\r\n"],"mappings":";AAAO,IAAM,aAAa;AACnB,IAAM,aAAa;","names":[]}
